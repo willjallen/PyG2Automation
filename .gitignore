@@ -1,6 +1,7 @@
 temp/
 tests/
 logs/
+Data/
 /temp*/
 # Byte-compiled / optimized / DLL files
 __pycache__/
