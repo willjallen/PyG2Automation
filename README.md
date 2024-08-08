@@ -28,3 +28,5 @@ python automate.py path/to/source.terrain path/to/output 2 -var 834_Seed=10 -var
 - Argument for setting rules corresponding to variables types, e.g ("seed")
 - Iteration run counts larger than 999
 - Modify SaveDefinition in nodes, e.g Format (EXR, TIFF)
+- Check GAEA version against last known working version with this script
+- Tool to display existing variables in the file, eg. "834_Seed, 234_Gain" etc. and their corresponding linked nodes
