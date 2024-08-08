@@ -14,8 +14,16 @@ GAEA_SWARM_EXE_PATH = r"C:\Program Files\QuadSpinner\Gaea 2\Gaea.Swarm.exe"
 # Type Definitions
 JSONType = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
 
-# Setup logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+# Create a logs directory if it doesn't exist
+log_filename = time.strftime("log_%Y%m%d-%H%M%S.log")
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(log_filename),
+        logging.StreamHandler()
+    ]
+)
 
 def update_all_json_key(json_obj: JSONType, key: str, new_values: List[JSONType]) -> None:
 	"""
