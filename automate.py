@@ -25,82 +25,27 @@ logging.basicConfig(
     ]
 )
 
-def update_all_json_key(json_obj: JSONType, key: str, new_values: List[JSONType]) -> None:
-	"""
-	Recursively update all instances of a key in a JSON object with new values.
-	
-	Args:
-		json_obj: The JSON object to be updated (dict or list).
-		key: The key to search for in the JSON object.
-		new_values: A list of values to replace the key's value.
-					If the list has a length of 1, all instances of the key will be updated to this single value.
-					If the list has more than one value, the number of values must match the number of key instances in the JSON object.
-
-	Raises:
-		ValueError: If the number of new values does not match the number of occurrences of the key.
-		TypeError: If there is a type mismatch between the original and new values, or if new_values is empty.
-	"""
-	if not new_values:
-		raise ValueError("new_values must contain at least one value.")
-	
-	def count_and_check_keys(obj: JSONType, key: str, value_sample: JSONType) -> int:
-		count = 0
-		if isinstance(obj, dict):
-			for k, v in obj.items():
-				if k == key:
-					if not isinstance(v, type(value_sample)):
-						raise TypeError(f"Type mismatch: Original value type {type(v)} and new value type {type(value_sample)}")
-					count += 1
-				count += count_and_check_keys(v, key, value_sample)
-		elif isinstance(obj, list):
-			for item in obj:
-				count += count_and_check_keys(item, key, value_sample)
-		return count
-
-	def update_key(obj: JSONType, key: str, value_iter: iter) -> None:
-		if isinstance(obj, dict):
-			for k, v in obj.items():
-				if k == key:
-					obj[k] = next(value_iter)
-				else:
-					update_key(v, key, value_iter)
-		elif isinstance(obj, list):
-			for item in obj:
-				update_key(item, key, value_iter)
-
-	# Perform a dry run to count occurrences of the key and check types
-	occurrences = count_and_check_keys(json_obj, key, new_values[0])
-	
-	# Handle the special case where new_values has only one item
-	if len(new_values) == 1:
-		new_values *= occurrences  # Repeat the single value for all occurrences
-
-	# Check if the number of new values matches the occurrences
-	if len(new_values) != occurrences:
-		raise ValueError(f"Number of new values ({len(new_values)}) does not match the number of occurrences ({occurrences}) of the key '{key}'.")
-
-	# Update the JSON object
-	value_iter = iter(new_values)
-	update_key(json_obj, key, value_iter)
-
 def update_all_json_key_func(json_obj: JSONType, target_key: str, update_func) -> None:
-	"""
-	Recursively find all instances of a key in a JSON object and apply an update function to the parent JSON object.
+    """
+    Recursively find all instances of a key in a JSON object and apply an update function to the parent JSON object.
 
-	Args:
-		json_obj: The JSON object to search (dict or list).
-		target_key: The key to search for in the JSON object.
-		update_func: The function to apply to each found key's value.
-	"""
-	if isinstance(json_obj, dict):
-		for k, v in json_obj.items():
-			if k == target_key:
-				update_func(json_obj, k)
-			else:
-				update_all_json_key_func(v, target_key, update_func)
-	elif isinstance(json_obj, list):
-		for item in json_obj:
-			update_all_json_key_func(item, target_key, update_func)
+    Args:
+        json_obj: The JSON object to search (dict or list).
+        target_key: The key to search for in the JSON object.
+        update_func: The function to apply to each found key's value.
+    """
+    if isinstance(json_obj, dict):
+        items_to_update = []
+        for k, v in json_obj.items():
+            if k == target_key:
+                items_to_update.append(json_obj)
+            else:
+                update_all_json_key_func(v, target_key, update_func)
+        for item in items_to_update:
+            update_func(item, target_key)
+    elif isinstance(json_obj, list):
+        for item in json_obj:
+            update_all_json_key_func(item, target_key, update_func)
 
 def evaluate_vars(args: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -139,8 +84,6 @@ def evaluate_vars(args: Dict[str, Any]) -> Dict[str, Any]:
     logging.info("Completed evaluation of variable assignments.")
     return vars
 
-
-
 def configure_terrain_file(terrain_data: Dict[str, Any], output_filepath: str, vars: Dict[str, Any]) -> Dict[str, Any]:
     """
     Configure the terrain file by updating various properties and variables.
@@ -157,11 +100,15 @@ def configure_terrain_file(terrain_data: Dict[str, Any], output_filepath: str, v
 
 	# Set post build script to have @echo off 
     logging.info(f"Setting post build script to include @echo off.")
-    update_all_json_key(terrain_data, 'PostBuildScript', ["@echo off"])
+    def update_build_script(json_obj: Dict[str, Any]) -> None:
+        json_obj['PostBuildScript'] = '@echo off'
+    update_all_json_key_func(terrain_data, 'BuildDefinition', lambda obj, key: update_build_script(obj[key]))
 
     # Update the Destination
     logging.info(f"Setting Destination key to {output_filepath}.")
-    update_all_json_key(terrain_data, 'Destination', [output_filepath])
+    def update_build_desination(json_obj: Dict[str, Any]) -> None:
+        json_obj['Destination'] = output_filepath
+    update_all_json_key_func(terrain_data, 'BuildDefinition', lambda obj, key: update_build_desination(obj[key]))
     
     # Update the variables in the Automation section
     def update_variable_value(json_obj: Dict[str, Any]) -> None:
@@ -241,7 +188,7 @@ def main(args: Dict[str, Any]):
 		original_terrain_json = json.load(f)
 	
 	for i in range(args['num_runs']):
-     
+		logging.info(f"Starting run {i}")
 		output_filepath = os.path.abspath(args['output_filepath'])
 		if args['increment_filepath']:
 			base_output_dir = output_filepath
@@ -255,10 +202,11 @@ def main(args: Dict[str, Any]):
 				new_dir_number = int(existing_dirs[-1]) + 1
 			else:
 				new_dir_number = 1
-			new_output_dir = os.path.join(base_output_dir, f"{new_dir_number:03d}")
+			new_output_dir = os.path.join(base_output_dir, f"{new_dir_number:06d}")
 			output_filepath = new_output_dir
-			print(new_output_dir)
 			os.makedirs(new_output_dir, exist_ok=True)
+		
+		logging.info(f"Output filepath set to {output_filepath}")
    
 		vars = evaluate_vars(args)
 		modified_terrain_json = configure_terrain_file(original_terrain_json.copy(), output_filepath, vars)
@@ -270,6 +218,7 @@ def main(args: Dict[str, Any]):
 		
 		os.makedirs(temp_dir, exist_ok=True)
 		with open(temp_filepath, 'w') as temp_file:
+			logging.info(f"Saving configured terrain file to {temp_filepath}")
 			json.dump(modified_terrain_json, temp_file, indent=2)
 
 		# Run the GAEA build process
