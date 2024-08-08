@@ -22,4 +22,9 @@ python automate.py path/to/source.terrain path/to/output 2 -var 834_Seed=10 -var
 
 ### Notes/TODO
 
-Currently, build resolution settings must be set in GAEA for the source terrain file.
+- Build resolution settings must be set in GAEA for the source terrain file. The mapping to values in `BuildDefinition` as resolution changes is unknown.
+- Correlary, support tiled builds
+- If resolution is set to 8k in the `.terrain` file, but one is using the community version, Gaea swarm will still attempt to build at 8k (taking a lot of time) but discard it and output 1k anyway 
+- Argument for setting rules corresponding to variables types, e.g ("seed")
+- Iteration run counts larger than 999
+- Modify SaveDefinition in nodes, e.g Format (EXR, TIFF)
