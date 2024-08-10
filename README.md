@@ -12,12 +12,12 @@ None
 - `output_filepath`: The path to the output file(s) (default: `.`).
 - `num_runs`: The number of build runs to perform. Vars will be reevaluated per run.
 - `-increment_filepath`: Flag to increment file path names. (`./001/out`, `./002/out`, etc.)
-- `-var`: Variable assignments in the form `var_name=value` or `var_name=lambda: expression`.
+- `-var`: Variable assignments in the form `"var_name=value"` or `"var_name=lambda: expression"`.
 
 ### Example Usage
 
 ```sh
-python automate.py path/to/source.terrain path/to/output 2 -var 834_Seed=10 -var 812_Seed=lambda: random.randint(1, 9999)
+python automate.py path/to/source.terrain path/to/output 2 -var "834_Seed=10" -var "812_Seed=lambda: random.randint(1, 9999)"
 ```
 
 ### Notes/TODO
